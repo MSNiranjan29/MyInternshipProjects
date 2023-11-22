@@ -1,153 +1,109 @@
-import tkinter as tk
-from tkinter import *
+import pygame
+import sys
+from Story import rooms
 
-root = tk.Tk()
-root.title("To-Do List")
-root.geometry("400x650+400+100")
-root.resizable(False, False)
+# Initialize PyGame
+pygame.init()
 
-task_List = []
+# Set screen dimensions
+screen_width = 800
+screen_height = 600
 
-update_window = None  # Variable to store the update window
-update_entry = None  # Variable to store the update entry widget
+# Create the screen
+screen = pygame.display.set_mode((screen_width, screen_height))
 
+# Set the title
+pygame.display.set_caption("Text Adventure")
 
-def addTask():
-    task = task_entry.get()
-    task_entry.delete(0, END)
-    if task:
-        with open("tasklist.txt", "a") as taskfile:
-            taskfile.write(f"\n{task}")
-        task_List.append(task)
-        listbox.insert(tk.END, task)
-
-
-def deleteTask():
-    selected_task_index = listbox.curselection()
-    if selected_task_index:
-        selected_task_index = int(selected_task_index[0])
-        task = listbox.get(selected_task_index)
-
-        # Remove "(Completed)" tag before checking in task_List
-        task_without_completed = task.replace("(Completed)", "").strip()
-
-        if task_without_completed in task_List:
-            task_List.remove(task_without_completed)
-            with open("tasklist.txt", "w") as taskfile:
-                for t in task_List:
-                    taskfile.write(t + "\n")
-            listbox.delete(selected_task_index)
+# Function to render text
+def render_text(text, font_size, color=(255, 255, 255)):
+    font = pygame.font.Font(None, font_size)
+    text_surface = font.render(text, True, color)
+    return text_surface, text_surface.get_rect()
 
 
-def updateTask():
-    global update_window, update_entry
-    selected_task_index = listbox.curselection()
-    if selected_task_index:
-        selected_task_index = int(selected_task_index[0])
-        task = listbox.get(selected_task_index)
+current_room = 0
 
-        # Create a new window for updating the task
-        update_window = tk.Toplevel(root)
-        update_window.title("Update Task")
+# Function to display game description
+def display_game_description():
+    description = [
+        "Welcome to the Text Adventure Game!",
+        "Navigate through different rooms by choosing actions.",
+        "Press Enter to start the game."
+    ]
+    screen.fill((0, 0, 0))  # Fill the screen with black
+    y_offset = 20
+    for line in description:
+        text_surf, text_rect = render_text(line, 30)
+        text_rect.topleft = (20, y_offset)
+        screen.blit(text_surf, text_rect)
+        y_offset += 40
+    pygame.display.update()
 
-        # Entry widget for updating the task
-        update_entry = tk.Entry(update_window, width=30, font="arial 12", bd=5)
-        update_entry.insert(0, task)
-        update_entry.pack(pady=10)
+# Display game description initially
+display_game_description()
 
-        # Button to perform the update
-        update_button = tk.Button(update_window, text="Update", font="arial 12 bold", command=perform_update)
-        update_button.pack()
+# Wait for Enter key press to start the game
+waiting_for_start = True
+while waiting_for_start:
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                waiting_for_start = False
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-def perform_update():
-    global update_window, update_entry
-    selected_task_indices = listbox.curselection()
-    if selected_task_indices:
-        updated_task = update_entry.get()
-        for index in selected_task_indices:
-            if updated_task:
-                task_List[index] = updated_task
-                listbox.delete(index)
-                listbox.insert(index, updated_task + "\n")
-        update_window.destroy()
+# Main game loop
+running = True
+while running:
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1:  # Option 1
+                # Check if the chosen action is within the range of available actions
+                if len(rooms[current_room]["actions"]) > 0:
+                    # Update current room based on player's choice for option 1
+                    current_room = (current_room + 1) % len(rooms)  # Wrap around if necessary
+            elif event.key == pygame.K_2:  # Option 2
+                # Check if the chosen action is within the range of available actions
+                if len(rooms[current_room]["actions"]) > 1:
+                    # Update current room based on player's choice for option 2
+                    current_room = (current_room + 2) % len(rooms)  # Wrap around if necessary
+            elif event.key == pygame.K_ESCAPE:  # Exit the game if Escape key is pressed
+                running = False
 
-def markAsCompleted():
-    selected_task_indices = listbox.curselection()
-    if selected_task_indices:
-        for index in selected_task_indices:
-            task = listbox.get(index)
-            if "(Completed)" not in task:
-                updated_task = task + " (Completed)"
-                task_List[index] = updated_task
-                listbox.delete(index)
-                listbox.insert(index, updated_task + "\n")
-                with open("tasklist.txt", "w") as taskfile:
-                    for t in task_List:
-                        taskfile.write(t)
-                break  # Stop after marking the first task as completed
+    # Clear the screen
+    screen.fill((0, 0, 0))  # Fill the screen with black
 
-def openTaskFile():
-    try:
-        global task_List
-        with open("tasklist.txt", "r") as taskfile:
-            tasks = taskfile.readlines()
+    # Render room description and actions
+    room_description, room_rect = render_text(rooms[current_room]["description"], 36)
+    room_rect.topleft = (20, 20)
+    screen.blit(room_description, room_rect)
 
-        for task in tasks:
-            task = task.strip()  # Remove leading and trailing whitespaces, including newline characters
-            if task:
-                task_List.append(task)
-                listbox.insert(tk.END, task)
+    for i, action in enumerate(rooms[current_room]["actions"]):
+        action_text, action_rect = render_text(action, 24)
+        action_rect.topleft = (20, 80 + 30 * i)
+        screen.blit(action_text, action_rect)
 
-    except FileNotFoundError:
-        file = open("tasklist.txt", "w")
-        file.close()
+    # Update the display
+    pygame.display.update()
 
-# ICON
-Image_icon = PhotoImage(file="Images/To-Do-List1.png")
-root.iconphoto(False, Image_icon)
+# Display exit message before quitting the game
+exit_message = "Exiting the game. Thank you for playing!"
+screen.fill((0, 0, 0))  # Fill the screen with black
+exit_text, exit_rect = render_text(exit_message, 36)
+exit_rect.center = (screen_width // 2, screen_height // 2)
+screen.blit(exit_text, exit_rect)
+pygame.display.update()
 
-# TOP BAR
-Top_Image = PhotoImage(file="Images/Topbar2.png")
-tk.Label(root, image=Top_Image).pack()
 
-dock_Image = PhotoImage(file="Images/Logodus1.png")
-tk.Label(root, image=dock_Image, bg="#02605B").place(x=30, y=25)
 
-note_Image = PhotoImage(file="Images/To-Do-List1.png")
-tk.Label(root, image=note_Image, bg="#015A54").place(x=340, y=25)
 
-heading = tk.Label(root, text="TASKS", font="arial 20 bold", fg="white", bg="#016A65")
-heading.place(x=155, y=25)
 
-# MAIN
-frame = tk.Frame(root, width=400, height=50, bg="white")
-frame.place(x=0, y=180)
-
-task = tk.StringVar()
-task_entry = tk.Entry(frame, width=18, font="arial 20", bd=0)
-task_entry.place(x=10, y=7)
-task_entry.focus()
-
-# Buttons for Add, Delete, Update
-add_button = tk.Button(frame, text="Add", font="arial 20 bold", width=6, bg="#5a95ff", fg="#fff", bd=0, command=addTask)
-add_button.place(x=300, y=0)
-
-delete_button = tk.Button(root, text="Delete", font="arial 12", command=deleteTask)
-delete_button.pack(side=tk.BOTTOM, pady=5)
-
-update_button = tk.Button(root, text="Update", font="arial 12", command=updateTask)
-update_button.pack(side=tk.BOTTOM, pady=5)
-
-complete_button = tk.Button(root, text="Mark as Completed", font="arial 12", command=markAsCompleted)
-complete_button.pack(side=tk.BOTTOM, pady=5)
-
-# LISTBOX
-frame1 = tk.Frame(root, bd=3, width=700, height=280, bg="#32485b")
-frame1.pack(pady=(160, 0))
-
-listbox = tk.Listbox(frame1, font=("arial", 12), width=40, height=16, bg="#32405b", fg="white", cursor="hand2",
-                     selectbackground="#5a95ff")
-listbox.pack(side=tk.LEFT, fill=tk.BOTH, padx=2)
-scrollbar = tk.Scrollbar(frame1)
-
-root.mainloop()
+# Wait for a short duration before quitting (for visibility of the exit message)
+pygame.time.delay(2000)  # 2000 milliseconds (2 seconds) delay
+pygame.quit()
+sys.exit()
