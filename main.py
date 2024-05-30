@@ -7,6 +7,7 @@ root.geometry("400x650+400+100")
 root.resizable(False, False)
 
 task_List = []
+completed_tasks = []
 
 update_window = None  # Variable to store the update window
 update_entry = None  # Variable to store the update entry widget
@@ -28,11 +29,8 @@ def deleteTask():
         selected_task_index = int(selected_task_index[0])
         task = listbox.get(selected_task_index)
 
-        # Remove "(Completed)" tag before checking in task_List
-        task_without_completed = task.replace("(Completed)", "").strip()
-
-        if task_without_completed in task_List:
-            task_List.remove(task_without_completed)
+        if task in task_List:
+            task_List.remove(task)
             with open("tasklist.txt", "w") as taskfile:
                 for t in task_List:
                     taskfile.write(t + "\n")
@@ -68,23 +66,29 @@ def perform_update():
             if updated_task:
                 task_List[index] = updated_task
                 listbox.delete(index)
-                listbox.insert(index, updated_task + "\n")
+                listbox.insert(index, updated_task)
         update_window.destroy()
+
 
 def markAsCompleted():
     selected_task_indices = listbox.curselection()
     if selected_task_indices:
         for index in selected_task_indices:
             task = listbox.get(index)
-            if "(Completed)" not in task:
+            if task not in completed_tasks:
                 updated_task = task + " (Completed)"
                 task_List[index] = updated_task
+                completed_tasks.append(updated_task)
                 listbox.delete(index)
-                listbox.insert(index, updated_task + "\n")
+                listbox.insert(index, updated_task)
                 with open("tasklist.txt", "w") as taskfile:
                     for t in task_List:
-                        taskfile.write(t)
+                        taskfile.write(t + "\n")
                 break  # Stop after marking the first task as completed
+            else:
+                completed_tasks.remove(task)
+                listbox.delete(index)
+
 
 def openTaskFile():
     try:
@@ -149,5 +153,7 @@ listbox = tk.Listbox(frame1, font=("arial", 12), width=40, height=16, bg="#32405
                      selectbackground="#5a95ff")
 listbox.pack(side=tk.LEFT, fill=tk.BOTH, padx=2)
 scrollbar = tk.Scrollbar(frame1)
+
+openTaskFile()  # Load tasks from file upon startup
 
 root.mainloop()
